@@ -1,22 +1,21 @@
-#![feature(llvm_asm)]
-
 #![no_std]
 #![no_main]
+#![feature(lang_items)]
 
-use ruduino::Pin;
-use ruduino::cores::current::{port};
+#[lang = "eh_personality"]
+extern "C" fn eh_personality() {}
+
+use core::intrinsics::unreachable;
+use core::panic::PanicInfo;
 
 #[no_mangle]
 pub extern fn main() {
-    port::B5::set_output();
-
     loop {
-        port::B5::set_high();
 
-        ruduino::delay::delay_ms(1000);
-
-        port::B5::set_low();
-
-        ruduino::delay::delay_ms(1000);
     }
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    loop {}
 }
