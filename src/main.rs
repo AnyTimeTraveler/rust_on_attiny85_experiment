@@ -5,7 +5,6 @@
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
 
-use core::intrinsics::unreachable;
 use core::panic::PanicInfo;
 
 #[no_mangle]
@@ -16,6 +15,6 @@ pub extern fn main() {
 }
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
