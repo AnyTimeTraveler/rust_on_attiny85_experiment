@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(lang_items)]
+#![feature(abi_avr_interrupt)]
 
 extern crate avr_device;
 
@@ -11,24 +12,21 @@ use core::panic::PanicInfo;
 
 static mut A: bool = false;
 
-pub extern fn isr() {
-    unsafe { A = !A };
+#[avr_device::interrupt(attiny85)]
+unsafe fn WDT() {
+    A = !A;
 }
 
 #[no_mangle]
 pub extern fn main() {
     let peripherals = unsafe { avr_device::attiny85::Peripherals::steal() };
     peripherals.WDT.wdtcr.write(|w|
-        w.wdif().set_bit()
+        w
+            .wdif().set_bit()
             .wdie().set_bit()
+            .wdpl().cycles_256k()
             .wde().set_bit()
-            .wdpl().cycles_64k());
-
-    // peripherals.EXINT.gifr.write(|w| w.)
-
-    unsafe  {
-        let prt =
-    }
+    );
 
     // shorthand for IO
     let portb = peripherals.PORTB;
@@ -39,11 +37,12 @@ pub extern fn main() {
     // set port 1 (LED) on
     portb.portb.write(|w| w.pb1().set_bit());
 
+
+
     // do nothing forever
     loop {
-        unsafe {
-            portb.portb.write(|w| w.pb1().bit(A));
-        }
+        // let x = unsafe { A };
+        // portb.portb.write(|w| w.pb1().bit(x));
     }
 }
 

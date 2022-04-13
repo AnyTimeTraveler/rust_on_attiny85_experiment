@@ -5,9 +5,11 @@ authors = ["Dylan McKay <me@dylanmckay.io>"]
 edition = '2018'
 
 [dependencies]
+vcell = "0.1.3"
+
 [dependencies.avr-device]
 version = "0.3.2"
-features = ["attiny85"]
+features = ["attiny85", "avr-device-macros", "rt"]
 
 [profile.dev]
 #panic = "abort"
