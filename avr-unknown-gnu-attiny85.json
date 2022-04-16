@@ -9,6 +9,7 @@
   "is-builtin": false,
   "late-link-args": {
     "gcc": [
+      "-lc",
       "-lgcc"
     ]
   },
