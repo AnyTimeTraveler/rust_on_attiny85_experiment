@@ -5,9 +5,6 @@
 
 extern crate avr_device;
 
-#[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
-
 use core::panic::PanicInfo;
 
 static mut A: bool = false;

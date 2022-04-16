@@ -12,11 +12,11 @@ version = "0.3.2"
 features = ["attiny85", "avr-device-macros", "rt"]
 
 [profile.dev]
-#panic = "abort"
+panic = "abort"
 lto = true
 
 [profile.release]
-#panic = "abort"
+panic = "abort"
 lto = true
 opt-level = "s"
 debug = false
