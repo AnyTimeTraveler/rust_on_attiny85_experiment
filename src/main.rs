@@ -6,46 +6,48 @@
 
 extern crate avr_device;
 
+use core::ops::BitAnd;
 use core::panic::PanicInfo;
 use avr_device::attiny85::Peripherals;
 
-static mut A: bool = false;
+static mut COUNTER: u16 = 0;
 
 #[allow(non_snake_case)]
 #[avr_device::interrupt(attiny85)]
-unsafe fn WDT() {
-    let peripherals = Peripherals::steal();
-    peripherals.WDT.wdtcr.write(|w| w
-        .wdce().set_bit()
-        .wde().set_bit()
-        .wdif().set_bit()
-    );
-    A = !A;
-    peripherals.PORTB.portb.write(|w| w.pb1().bit(A));
+unsafe fn TIMER0_OVF() {
+    COUNTER += 1;
+    llvm_asm!("reti");
 }
+
+#[allow(non_snake_case)]
+#[avr_device::interrupt(attiny85)]
+fn TIMER0_COMPA() {}
+
+#[allow(non_snake_case)]
+#[avr_device::interrupt(attiny85)]
+fn TIMER0_COMPB() {}
 
 #[avr_device::entry]
 fn main() -> ! {
     let peripherals = unsafe { Peripherals::steal() };
 
-    // Clear watchdog reset
-    peripherals.CPU.mcusr.write(|w|w.wdrf().clear_bit());
+    // Set Synchronization Mode (stops timer)
+    peripherals.TC0.gtccr.write(|w| w.tsm().set_bit());
+    // Disable COMPA Value compare
+    peripherals.TC0.tccr0a.write(|w| w.com0a().disconnected());
+    // Disable COMPB Value compare
+    peripherals.TC0.tccr0a.write(|w| w.com0b().disconnected());
+    // Start counting from 0x00 to 0xFF and overflow back to 0x00 without stopping
+    peripherals.TC0.tccr0a.write(|w| w.wgm0().normal_top());
 
-    // Unlock watchdog changes
-    peripherals.WDT.wdtcr.write(|w|
-        w
-            .wdce().set_bit() // Watchdog Change Enable
-            .wde().set_bit() // Watchdog Enable
-    );
-
-    // Configure watchdog
-    peripherals.WDT.wdtcr.write(|w|
-        w
-            .wdif().set_bit() //
-            .wdie().set_bit() //
-            .wdpl().cycles_64k() //
-            .wde().set_bit() //
-    );
+    //Disable COMPA Interrupt
+    peripherals.TC0.timsk.write(|w| w.ocie0a().clear_bit());
+    // Disable COMPB Interrupt
+    peripherals.TC0.timsk.write(|w| w.ocie0b().clear_bit());
+    // Enable overflow interrupt
+    peripherals.TC0.timsk.write(|w| w.toie0().set_bit());
+    // Set Synchronization Mode (stops timer)
+    peripherals.TC0.gtccr.write(|w| w.tsm().clear_bit());
 
     // Enable interrupts
     unsafe {
@@ -57,12 +59,25 @@ fn main() -> ! {
 
     // set port 1 (LED) as output
     portb.ddrb.write(|w| w.pb1().set_bit());
+    // set port 3 (LED) as output
+    portb.ddrb.write(|w| w.pb3().set_bit());
 
     // set port 1 (LED) on
     portb.portb.write(|w| w.pb1().set_bit());
 
     // do nothing forever
-    loop {}
+    loop {
+        let status_register = peripherals.CPU.mcusr.read().bits();
+        // Check if Global Interrupt Enable is set
+        let global_interrupt_enable_bit = status_register.bitand(0x80) != 0;
+
+        portb.portb.write(|w| w.pb3().bit(global_interrupt_enable_bit));
+
+        let counter = unsafe { COUNTER };
+        let led_on = counter < u16::MAX / 2;
+
+        portb.portb.write(|w| w.pb1().bit(led_on));
+    }
 }
 
 #[panic_handler]
